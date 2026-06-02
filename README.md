@@ -1,70 +1,81 @@
-# Getting Started with Create React App
+# AI 聊天助手 Demo
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+基于 React 的网页版 AI 聊天应用，接入 [DeepSeek](https://platform.deepseek.com/) 大模型 API，支持对话、窗口拖拽和背景切换。
 
-## Available Scripts
+## 功能特性
 
-In the project directory, you can run:
+- **AI 对话**：输入消息后调用 DeepSeek API，展示用户与 AI 的聊天记录
+- **可拖动窗口**：聊天框可在页面上自由拖拽，带半透明毛玻璃效果
+- **背景切换**：右上角按钮可在多张背景图之间循环切换
+- **Enter 发送**：输入框支持回车键快速发送消息
 
-### `npm start`
+## 技术栈
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- React 19
+- Create React App
+- DeepSeek Chat Completions API
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 快速开始
 
-### `npm test`
+### 1. 安装依赖
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+npm install
+```
 
-### `npm run build`
+### 2. 配置 API Key
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+复制环境变量示例文件，并填入你的 DeepSeek API Key：
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+cp .env.example .env.local
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+编辑 `.env.local`：
 
-### `npm run eject`
+```
+REACT_APP_DEEPSEEK_API_KEY=你的_API_Key
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+> API Key 可在 [DeepSeek 开放平台](https://platform.deepseek.com/) 获取。请勿将 `.env.local` 提交到 Git 仓库。
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 3. 启动开发服务器
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+npm start
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+浏览器访问 [http://localhost:3000](http://localhost:3000) 即可使用。修改代码后页面会自动刷新。
 
-## Learn More
+## 常用命令
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+| 命令 | 说明 |
+|------|------|
+| `npm start` | 启动开发模式，默认端口 3000 |
+| `npm run build` | 构建生产版本，输出到 `build` 目录 |
+| `npm test` | 运行测试（交互式监听模式） |
+| `npm run eject` | 弹出 CRA 配置（不可逆，一般不需要） |
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 项目结构
 
-### Code Splitting
+```
+ai-chat-demo/
+├── public/          # 静态资源
+├── src/
+│   ├── App.js       # 主组件（聊天界面、API 调用、拖拽逻辑）
+│   ├── index.js     # 应用入口
+│   └── ...
+├── .env.example     # 环境变量示例
+├── .env.local       # 本地环境变量（不提交到 Git）
+└── package.json
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 部署说明
 
-### Analyzing the Bundle Size
+执行 `npm run build` 后，将 `build` 目录部署到任意静态托管服务即可。
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+注意：当前 API Key 在前端通过环境变量注入，生产环境仍会将 Key 暴露给客户端。正式项目建议将 API 请求放到后端代理，避免密钥泄露。
 
-### Making a Progressive Web App
+## 仓库地址
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+[https://github.com/330wanlu/zwl_ai](https://github.com/330wanlu/zwl_ai)
