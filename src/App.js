@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 export default function AiChat() {
   const [msg, setMsg] = useState('')
   const [list, setList] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
   const boxRef = useRef(null)
   const chatWindowRef = useRef(null)
 
@@ -98,39 +99,91 @@ export default function AiChat() {
     boxRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [list])
 
+  const toApiMessages = (items) =>
+    items
+      .filter(item => item.text)
+      .map(item => ({
+        role: item.type === 'user' ? 'user' : 'assistant',
+        content: item.text
+      }))
+
+  const clearChat = () => {
+    if (isLoading) return
+    setList([])
+  }
+
+  const updateLastAi = (text) => {
+    setList(prev => {
+      const arr = [...prev]
+      arr[arr.length - 1] = { type: 'ai', text }
+      return arr
+    })
+  }
+
   const send = async () => {
     const text = msg.trim()
-    if (!text) return
+    if (!text || isLoading) return
+
+    const apiMessages = [...toApiMessages(list), { role: 'user', content: text }]
     setMsg('')
-    setList(prev => [...prev, { type: 'user', text }])
-    setList(prev => [...prev, { type: 'ai', text: '思考中...' }])
+    setList(prev => [...prev, { type: 'user', text }, { type: 'ai', text: '' }])
+    setIsLoading(true)
 
     try {
-      const response = await fetch("https://api.deepseek.com/chat/completions", {
-        method: "POST",
+      const response = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${API_KEY}`
         },
         body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: [{ role: "user", content: text }],
-          stream: false
+          model: 'deepseek-chat',
+          messages: apiMessages,
+          stream: true
         })
       })
-      const data = await response.json()
-      const aiReply = data.choices?.[0]?.message?.content || "暂无回复内容"
-      setList(prev => {
-        const arr = [...prev]
-        arr[arr.length - 1].text = aiReply
-        return arr
-      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.error?.message || `请求失败 (${response.status})`)
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullText = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || trimmed === 'data: [DONE]') continue
+          if (!trimmed.startsWith('data: ')) continue
+
+          try {
+            const json = JSON.parse(trimmed.slice(6))
+            const delta = json.choices?.[0]?.delta?.content
+            if (delta) {
+              fullText += delta
+              updateLastAi(fullText)
+            }
+          } catch {
+            // 忽略无法解析的行
+          }
+        }
+      }
+
+      if (!fullText) updateLastAi('暂无回复内容')
     } catch (e) {
-      setList(prev => {
-        const arr = [...prev]
-        arr[arr.length - 1].text = "请求失败，请检查密钥与网络"
-        return arr
-      })
+      updateLastAi(e.message || '请求失败，请检查密钥与网络')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -195,10 +248,32 @@ export default function AiChat() {
             fontWeight: 500,
             color: '#222',
             cursor: isDragging ? "grabbing" : "grab",
-            userSelect: "none"
+            userSelect: "none",
+            position: 'relative',
+            padding: '0 16px'
           }}
         >
           AI 聊天助手（拖动标题栏移动）
+          <button
+            type="button"
+            onMouseDown={e => e.stopPropagation()}
+            onClick={clearChat}
+            disabled={isLoading || list.length === 0}
+            style={{
+              position: 'absolute',
+              right: 16,
+              padding: '6px 12px',
+              fontSize: '13px',
+              border: '1px solid #e5e6eb',
+              borderRadius: '14px',
+              background: '#fff',
+              color: '#666',
+              cursor: isLoading || list.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: isLoading || list.length === 0 ? 0.5 : 1
+            }}
+          >
+            清空对话
+          </button>
         </div>
 
         <div style={{
@@ -240,8 +315,11 @@ export default function AiChat() {
                   borderRadius: '18px 18px 18px 4px',
                   fontSize: '15px',
                   lineHeight: 1.6,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                }}>{item.text}</div>
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {item.text || (isLoading && idx === list.length - 1 ? '思考中...' : '')}
+                </div>
               </div>
             )
           ))}
@@ -263,7 +341,8 @@ export default function AiChat() {
             <input
               value={msg}
               onChange={e => setMsg(e.target.value)}
-              placeholder="输入消息..."
+              placeholder={isLoading ? 'AI 正在回复...' : '输入消息...'}
+              disabled={isLoading}
               style={{
                 flex: 1,
                 border: 'none',
@@ -271,17 +350,22 @@ export default function AiChat() {
                 fontSize: '15px',
                 background: 'transparent'
               }}
-              onKeyDown={e => e.key === 'Enter' && send()}
+              onKeyDown={e => e.key === 'Enter' && !isLoading && send()}
             />
-            <button onClick={send} style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              border: 'none',
-              background: '#6986ff',
-              color: '#fff',
-              cursor: 'pointer'
-            }}>➤
+            <button
+              onClick={send}
+              disabled={isLoading}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                border: 'none',
+                background: '#6986ff',
+                color: '#fff',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                opacity: isLoading ? 0.6 : 1
+              }}
+            >➤
             </button>
           </div>
         </div>
