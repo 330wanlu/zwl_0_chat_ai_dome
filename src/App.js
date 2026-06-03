@@ -22,6 +22,43 @@ export default function AiChat() {
 
   const API_KEY = process.env.REACT_APP_DEEPSEEK_API_KEY
 
+  const CHAT_MAX_WIDTH = 720
+  const VIEW_PADDING = 12
+
+  const getChatSize = () => {
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    return {
+      width: Math.min(CHAT_MAX_WIDTH, vw - VIEW_PADDING * 2),
+      height: Math.min(vh * 0.9, vh - VIEW_PADDING * 2)
+    }
+  }
+
+  const clampPosition = (pos, size) => {
+    const maxX = Math.max(0, window.innerWidth - size.width)
+    const maxY = Math.max(0, window.innerHeight - size.height)
+    return {
+      x: Math.min(Math.max(0, pos.x), maxX),
+      y: Math.min(Math.max(0, pos.y), maxY)
+    }
+  }
+
+  const [chatSize, setChatSize] = useState(() => {
+    if (typeof window === 'undefined') return { width: CHAT_MAX_WIDTH, height: 600 }
+    return getChatSize()
+  })
+
+  useEffect(() => {
+    const onResize = () => {
+      const size = getChatSize()
+      setChatSize(size)
+      setPosition(prev => clampPosition(prev, size))
+    }
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   // 鼠标按下
   const startDrag = (e) => {
     setIsDragging(true)
@@ -35,13 +72,20 @@ export default function AiChat() {
   useEffect(() => {
     const onDrag = (e) => {
       if (!isDragging) return
-      setPosition({
+      const size = getChatSize()
+      setPosition(clampPosition({
         x: e.clientX - offset.x,
         y: e.clientY - offset.y
-      })
+      }, size))
     }
 
-    const stopDrag = () => setIsDragging(false)
+    const stopDrag = () => {
+      if (isDragging) {
+        const size = getChatSize()
+        setPosition(prev => clampPosition(prev, size))
+      }
+      setIsDragging(false)
+    }
     window.addEventListener('mousemove', onDrag)
     window.addEventListener('mouseup', stopDrag)
     return () => {
@@ -124,10 +168,9 @@ export default function AiChat() {
       {/* 可拖动聊天窗口 */}
       <div
         ref={chatWindowRef}
-        onMouseDown={startDrag}
         style={{
-          width: '720px',
-          height: '90vh',
+          width: chatSize.width + 'px',
+          height: chatSize.height + 'px',
           background: 'rgba(255,255,255,0.85)',
           backdropFilter: "blur(10px)",
           borderRadius: "20px",
@@ -137,31 +180,34 @@ export default function AiChat() {
           overflow: "hidden",
           position: "absolute",
           left: position.x + 'px',
-          top: position.y + 'px',
-          cursor: isDragging ? "grabbing" : "grab",
-          userSelect: "none"
+          top: position.y + 'px'
         }}
       >
-        <div style={{
-          height: '60px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderBottom: '1px solid #eee',
-          fontSize: '17px',
-          fontWeight: 500,
-          color: '#222'
-        }}>
-          AI 聊天助手（可拖动）
+        <div
+          onMouseDown={startDrag}
+          style={{
+            height: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderBottom: '1px solid #eee',
+            fontSize: '17px',
+            fontWeight: 500,
+            color: '#222',
+            cursor: isDragging ? "grabbing" : "grab",
+            userSelect: "none"
+          }}
+        >
+          AI 聊天助手（拖动标题栏移动）
         </div>
 
         <div style={{
           flex: 1,
           padding: '24px 32px',
           overflowY: 'auto',
-          cursor: "text"
+          cursor: "text",
+          userSelect: "text"
         }}
-        onMouseDown={(e) => e.stopPropagation()}
         >
           {list.map((item, idx) => (
             item.type === 'user' ? (
@@ -213,7 +259,6 @@ export default function AiChat() {
             padding: '10px 16px',
             background: '#fff'
           }}
-          onMouseDown={(e) => e.stopPropagation()}
           >
             <input
               value={msg}
