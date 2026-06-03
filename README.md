@@ -78,4 +78,4 @@ ai-chat-demo/
 
 ## 仓库地址
 
-[https://github.com/330wanlu/zwl_ai](https://github.com/330wanlu/zwl_ai)
+[https://github.com/330wanlu/zwl_0_chat_ai_dome](https://github.com/330wanlu/zwl_0_chat_ai_dome)
