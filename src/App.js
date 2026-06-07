@@ -21,8 +21,6 @@ export default function AiChat() {
     "https://p2.itc.cn/q_70/images01/20230730/7a3b1c26c9264832997c9488c5f94071.png"
   ]
 
-  const API_KEY = process.env.REACT_APP_DEEPSEEK_API_KEY
-
   const CHAT_MAX_WIDTH = 720
   const VIEW_PADDING = 12
 
@@ -99,14 +97,6 @@ export default function AiChat() {
     boxRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [list])
 
-  const toApiMessages = (items) =>
-    items
-      .filter(item => item.text)
-      .map(item => ({
-        role: item.type === 'user' ? 'user' : 'assistant',
-        content: item.text
-      }))
-
   const clearChat = () => {
     if (isLoading) return
     setList([])
@@ -124,64 +114,28 @@ export default function AiChat() {
     const text = msg.trim()
     if (!text || isLoading) return
 
-    const apiMessages = [...toApiMessages(list), { role: 'user', content: text }]
     setMsg('')
     setList(prev => [...prev, { type: 'user', text }, { type: 'ai', text: '' }])
     setIsLoading(true)
 
     try {
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
+      updateLastAi('Claude 正在思考...')
+
+      const response = await fetch('/api/claude', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: apiMessages,
-          stream: true
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: text })
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err.error?.message || `请求失败 (${response.status})`)
+        throw new Error(data.error || `请求失败 (${response.status})`)
       }
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      let fullText = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (!trimmed || trimmed === 'data: [DONE]') continue
-          if (!trimmed.startsWith('data: ')) continue
-
-          try {
-            const json = JSON.parse(trimmed.slice(6))
-            const delta = json.choices?.[0]?.delta?.content
-            if (delta) {
-              fullText += delta
-              updateLastAi(fullText)
-            }
-          } catch {
-            // 忽略无法解析的行
-          }
-        }
-      }
-
-      if (!fullText) updateLastAi('暂无回复内容')
+      updateLastAi(data.response || '暂无回复内容')
     } catch (e) {
-      updateLastAi(e.message || '请求失败，请检查密钥与网络')
+      updateLastAi(e.message || '调用失败，请确保已安装 Claude CLI')
     } finally {
       setIsLoading(false)
     }
@@ -225,7 +179,6 @@ export default function AiChat() {
           width: chatSize.width + 'px',
           height: chatSize.height + 'px',
           background: 'rgba(255,255,255,0.85)',
-          backdropFilter: "blur(10px)",
           borderRadius: "20px",
           boxShadow: "0 0 20px rgba(0,0,0,0.2)",
           display: "flex",
@@ -253,7 +206,7 @@ export default function AiChat() {
             padding: '0 16px'
           }}
         >
-          AI 聊天助手（拖动标题栏移动）
+          AI 助手 - Claude CLI（拖动标题栏移动）
           <button
             type="button"
             onMouseDown={e => e.stopPropagation()}
@@ -316,7 +269,8 @@ export default function AiChat() {
                   fontSize: '15px',
                   lineHeight: 1.6,
                   boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  whiteSpace: 'pre-wrap'
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all'
                 }}>
                   {item.text || (isLoading && idx === list.length - 1 ? '思考中...' : '')}
                 </div>

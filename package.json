@@ -1,23 +1,31 @@
 {
   "name": "ai-chat-demo",
   "version": "0.1.0",
+  "description": "AI 聊天助手 - 通过 Claude CLI 实现联网对话",
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
+    "concurrently": "^9.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "react-scripts start",
+    "server": "node server/index.js",
     "build": "react-scripts build",
+    "serve": "node server/index.js",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  "proxy": "http://localhost:3001",
   "eslintConfig": {
     "extends": [
       "react-app",
